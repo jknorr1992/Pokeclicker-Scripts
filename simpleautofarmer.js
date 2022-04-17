@@ -10,8 +10,10 @@
 
 var farmState;
 var mulchState;
+let replantState;
 var farmColor;
 var mulchColor;
+let replantColor;
 var autoFarmTimer;
 var awaitAutoFarm;
 var newSave;
@@ -35,23 +37,60 @@ function initAutoFarm() {
         mulchColor = "success"
     }
 
+    if(replantState == "OFF")
+    {
+        replantColor = "danger";
+    }
+    else
+    {
+        replantColor = "success";
+    }
+
     var elemAF = document.createElement("div");
-    elemAF.innerHTML = `<div class="row justify-content-center py-0">
-    <div class="col-6 pr-0">
-    <button id="auto-farm-start" class="btn btn-`+ farmColor + ` btn-block" style="font-size:9pt;">
-    Auto Farm [`+ farmState + `]
-    </button>
-    </div>
-    <div class="col-6 pl-0">
-    <button id="auto-mulch-start" class="btn btn-`+ mulchColor + ` btn-block" style="font-size:9pt;">
-    Auto Mulch [`+ mulchState + `]
-    </button>
-    </div>
-    </div>`
+    elemAF.className = "row justify-content-center py-0"
+
+    const autoFarmDiv = document.createElement("div");
+    autoFarmDiv.className = "col-6 pr-0";
+    elemAF.appendChild(autoFarmDiv);
+
+    const autoFarmButton = document.createElement("button");
+    autoFarmButton.id = "auto-farm-start";
+    autoFarmButton.className = `btn btn-${farmColor} btn-block`;
+    autoFarmButton.innerText = `Auto Farm [${farmState}]`;
+    autoFarmButton.style = "font-size:9pt;";
+    autoFarmDiv.appendChild(autoFarmButton);
+
+    const autoMulchDiv = document.createElement("div");
+    autoMulchDiv.className = "col-6 pl-0";
+    autoFarmDiv.after(autoMulchDiv);
+
+    const autoMulchButton = document.createElement("button");
+    autoMulchButton.id = "auto-mulch-start";
+    autoMulchButton.className = `btn btn-${mulchColor} btn-block`;
+    autoMulchButton.innerText = `Auto Mulch [${mulchState}]`;
+    autoMulchButton.style = "font-size:9pt;";
+    autoMulchDiv.appendChild(autoMulchButton);
+
+    const elemAR = document.createElement("div");
+    elemAR.className = "row justify-content-center py-0"
+
+    const autoReplantDiv = document.createElement("div");
+    autoReplantDiv.className = "col-12 pl-3";
+    elemAR.appendChild(autoReplantDiv);
+
+    const autoReplantButton = document.createElement("button");
+    autoReplantButton.id = "auto-replant-start";
+    autoReplantButton.className = `btn btn-${replantColor} btn-block`;
+    autoReplantButton.innerText = `Pattern Mode [${replantState}]`;
+    autoReplantButton.style = "font-size:9pt;";
+    autoReplantDiv.appendChild(autoReplantButton);
+
     shovelList.before(elemAF)
+    elemAF.after(elemAR);
 
     $("#auto-farm-start").click(startAutoFarm);
     $("#auto-mulch-start").click(autoMulch);
+    $("#auto-replant-start").click(autoReplant);
 
     function startAutoFarm() {
         if (farmState == "OFF") {
@@ -69,11 +108,32 @@ function initAutoFarm() {
     }
 
     function doPlantHarvest() {
-        App.game.farming.plantAll(FarmController.selectedBerry())
+        if(replantState == "OFF")
+        {
+            App.game.farming.plantAll(FarmController.selectedBerry());
+        }
+        else
+        {
+            App.game.farming.plotList.forEach((plot, index) => 
+            {
+                
+                if(plot.isUnlocked && !plot.isEmpty())
+                {
+                    const plotBerry = plot.berry;
+                    App.game.farming.harvest(index); //TODO: Add an adjustable input to delay harvest for berry mutations
+                    App.game.farming.plant(index, plotBerry);
+                }
+                
+            });
+        }
         if (mulchState == "ON") {
             FarmController.mulchAll()
         }
-        App.game.farming.harvestAll()
+        if(replantState == "OFF")
+        {
+            App.game.farming.harvestAll()
+        }
+        
     }
 
     function autoMulch() {
@@ -92,6 +152,25 @@ function initAutoFarm() {
         }
     }
 
+    function autoReplant()
+    {
+        if (replantState == "OFF") 
+        {
+            localStorage.setItem("autoReplantState", "ON");
+            replantState = "ON";
+            autoReplantButton.classList.remove('btn-danger');
+            autoReplantButton.classList.add('btn-success');
+        }
+        else
+        {
+            localStorage.setItem("autoReplantState", "OFF");
+            replantState = "OFF"
+            autoReplantButton.classList.remove('btn-success');
+            autoReplantButton.classList.add('btn-danger');
+        }
+        autoReplantButton.innerText = `Pattern Mode [${replantState}]`;
+    }
+
     function endAutoFarm() {
         localStorage.setItem("autoFarmState", "OFF");
         farmState = "OFF"
@@ -108,8 +187,13 @@ if (localStorage.getItem('autoFarmState') == null) {
 if (localStorage.getItem('autoMulchState') == null) {
     localStorage.setItem("autoMulchState", "OFF");
 }
+if (localStorage.getItem('autoReplantState') == null) 
+{
+    localStorage.setItem("autoReplantState", "OFF");
+}
 farmState = localStorage.getItem('autoFarmState');
 mulchState = localStorage.getItem('autoMulchState');
+replantState = localStorage.getItem("autoReplantState");
 
 function loadScript(){
     var scriptLoad = setInterval(function () {
